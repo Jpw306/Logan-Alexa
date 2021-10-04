@@ -3,13 +3,26 @@
 ## _A multipurpose Discord bot that brings together a community through music, user stats, and much more_
 
 # Setup:
-- Install [openjdk-13.0.2] for your current OS and add the downloaded folder to the root of the bot's directory.
-- In the new directory, go into bin folder and create a file called "application.yml"
-- Create a data folder in the root of the bot's directory
+
+Make sure that you use Python 3.5.0 or greater
+#### openjdk-13.0.2:
+Install [openjdk-13.0.2] for your current OS and add the downloaded folder to the root of the bot's directory.
+
+#### Lavalink:
+Go to [Lavalink] github page and download the Lavalink.jar file. After it has downloaded run the following commands ton boot up a Lavalink server
+```sh
+cd ./bot/openjdk-13.0.2/bin/
+java -jar Lavalink.jar
+```
+
+#### Discord[voice] and wavelink:
+To install Discord.py and wavelink run the following command in the terminal.
+```sh
+pip install discord.py[voice] wavelink
+```
 
 #### application.yml:
-
-Copy and paste the following into the newly created application.yml file.
+In the new directory, go into bin folder and create a file called "application.yml". Copy and paste the following into the newly created file.
 
 ```sh
 server: # REST and WS server
@@ -61,6 +74,8 @@ logging:
     root: INFO
     lavalink: INFO
 ```
+#### Data folder:
+Create a folder called "data" in the root of the bot's directory
 
 #### Logan.db:
 Run the following command in the terminal to go into the bot's data folder
@@ -103,5 +118,6 @@ Run launcher.py in the bot's directory and _voilà_
 
 > Note: For the user stats to work as intended, feel free to change the emoji names in the bot.py file
 
-[openjdk-13.0.2]: https://openjdk.java.net/install/
+[Lavalink]: https://ci.fredboat.com/viewLog.html?buildId=lastSuccessful&buildTypeId=Lavalink_Build&tab=artifacts&guest=1
+[openjdk-13.0.2]: https://jdk.java.net/archive/
 [Discord Developer Portal]: https://discord.com/developers/applications
