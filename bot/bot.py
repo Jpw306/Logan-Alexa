@@ -1,9 +1,12 @@
 from pathlib import Path
+from datetime import datetime
 
 import discord
 import sqlite3
+import re
 
 from discord.ext import commands
+from discord import Embed
 from discord.utils import get
 
 intents = discord.Intents.default()
@@ -73,23 +76,72 @@ class Bot(commands.Bot):
     async def on_disconnect(self):
         print("Bot disconnected.")
 
-    async def on_reaction_add(self, reaction, user):
-        if reaction.emoji.name == "upvote":
-            db.execute("SELECT uv FROM discord WHERE id = ?", (str(reaction.message.author),))
+    async def on_raw_reaction_add(self, payload):
+        channel = self.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        if payload.emoji.name == "upvote":
+            db.execute("SELECT uv FROM discord WHERE id = ?", (str(message.author),))
             rows = db.fetchone()
             uv = rows[0]
             uv += 1
-            db.execute("UPDATE discord SET uv=? WHERE id= ?", (uv, str(reaction.message.author),))
+            db.execute("UPDATE discord SET uv=? WHERE id= ?", (uv, str(message.author),))
             sql.commit()
-            print(f"{user.name} has added {reaction.emoji} to the message: {reaction.message.content}")
-        elif reaction.emoji.name == "downvote":
-            db.execute("SELECT dv FROM discord WHERE id = ?", (str(reaction.message.author),))
+            print(f"{payload.user_id} has added {payload.emoji} to the message: {message.content}")
+        elif payload.emoji.name == "downvote":
+            db.execute("SELECT dv FROM discord WHERE id = ?", (str(message.author),))
             rows = db.fetchone()
             dv = rows[0]
             dv += 1
-            db.execute("UPDATE discord SET dv=? WHERE id= ?", (dv, str(reaction.message.author),))
+            db.execute("UPDATE discord SET dv=? WHERE id= ?", (dv, str(message.author),))
             sql.commit()
-            print(f"{user.name} has added {reaction.emoji} to the message: {reaction.message.content}")
+            print(f"{payload.user_id} has added {payload.emoji} to the message: {message.content}")
+
+            #Hall of Shame
+            reaction = get(message.reactions, emoji=payload.emoji)
+            shame = reaction.count
+            reqShame = 6
+
+            if shame >= reqShame:
+                db.execute("SELECT StarMessageID FROM starboard WHERE RootMessageID = ?", 
+                                    (str(message.id),)) or None
+                try:
+                    rows = db.fetchone()
+                    msg_id = rows[0]
+                except:
+                    pass
+
+                embed = Embed(title="Hall Of Shame", 
+                            color=message.author.color,
+                            timestamp=datetime.utcnow())
+
+                fields = [("Author", message.author.mention, False),
+                        ("Content", message.content or "See attachment", False),
+                        ("Downvotes", shame, False)]
+
+                for name, value, inline in fields:
+                    embed.add_field(name = name, value=value, inline=inline)
+
+                if len(message.attachments):
+                    embed.set_image(url=message.attachments[0].url)
+
+                try:
+                    star_message = await self.HOS.fetch_message(msg_id)
+                    await star_message.edit(embed=embed)
+                    db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", (shame, str(message.id),))
+
+                except:
+                    star_message = await self.HOS.send(embed=embed)
+                    db.execute("INSERT INTO starboard (RootMessageID, StarMessageID) VALUES (?, ?)", (str(message.id), str(star_message.id),))
+
+                # if shame == reqShame:
+                #     star_message = await self.HOS.send(embed=embed)
+                #     db.execute("INSERT INTO starboard (RootMessageID, StarMessageID) VALUES (?, ?)", (str(message.id),), str(star_message.id))
+
+                # else:
+                #     star_message = await self.HOS.fetch_message(msg_id)
+                #     await star_message.edit(embed=embed)
+                #     db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", shame, (str(message.id),))
+            
         else:
             pass
 
@@ -114,6 +166,37 @@ class Bot(commands.Bot):
                 db.execute("UPDATE discord SET dv=? WHERE id= ?", (dv, str(message.author),))
                 sql.commit()
                 print(f"{payload.user_id} has removed {payload.emoji} from the message: {message.content}")
+
+            #Hall of Shame
+            try:
+                reaction = get(message.reactions, emoji=payload.emoji)
+                shame = reaction.count
+
+                db.execute("SELECT StarMessageID FROM starboard WHERE RootMessageID = ?", 
+                                    (str(message.id),)) or None
+                rows = db.fetchone()
+                msg_id = rows[0]
+
+                embed = Embed(title="Hall Of Shame", 
+                            color=message.author.color,
+                            timestamp=datetime.utcnow())
+
+                fields = [("Author", message.author.mention, False),
+                        ("Content", message.content or "See attachment", False),
+                        ("Downvotes", shame, False)]
+
+                for name, value, inline in fields:
+                    embed.add_field(name = name, value=value, inline=inline)
+
+                if len(message.attachments):
+                    embed.set_image(url=message.attachments[0].url)
+
+                
+                star_message = await self.HOS.fetch_message(msg_id)
+                await star_message.edit(embed=embed)
+                db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", (shame, str(message.id),))
+            except:
+                pass
         else:
             pass
 
@@ -125,7 +208,8 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         self.client_id = (await self.application_info()).id
-        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name='Harvard Lectures'))
+        self.HOS = self.get_channel(883807348701925416)
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='Field of Hopes and Dreams'))
         print('Logged in as {0} ({0.id})'.format(self.user))
         print('------')
 
@@ -135,6 +219,20 @@ class Bot(commands.Bot):
     async def process_commands(self, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
 
+        keyword1 = r"\bforgot\b"
+        keyword2 = r"\bforgor\b"
+        keyword3 = r"\bone\b"
+        keyword4 = r"\b1\b"
+
+        if len(re.findall(keyword1, msg.content, re.I)) > 0:
+            await ctx.send("forgor 💀")
+        
+        if len(re.findall(keyword2, msg.content, re.I)) > 0:
+            await ctx.send("forgot ❤️")
+
+        if len(re.findall(keyword3, msg.content, re.I)) > 0 or len(re.findall(keyword4, msg.content, re.I)) > 0:
+            await ctx.send("Uno!")
+
         if ctx.command is not None:
             await self.invoke(ctx)
 
@@ -143,3 +241,4 @@ class Bot(commands.Bot):
             await update_data(str(msg.author))
             await add_messages(str(msg.author))
             await self.process_commands(msg)
+     
