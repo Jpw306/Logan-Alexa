@@ -9,10 +9,16 @@ from discord.utils import get
 import io
 import aiohttp
 
-pfpurl = "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/Underlexa.png"
+pfpurl = ["https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/angry.png",
+        "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/blush.png",
+        "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/happy.png",
+        "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/sad.png",
+        "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/suprise.png"]
 
-def urlBuilder(msg):
-    return "https://www.demirramon.com/gen/undertale_text_box.png?text=%s&box=undertale&boxcolor=ffffff&character=custom&url=%s" % (quote(msg), pfpurl)
+
+
+def urlBuilder(msg, pfpNum):
+    return "https://www.demirramon.com/gen/undertale_text_box.png?text=%s&box=undertale&boxcolor=ffffff&character=custom&url=%s" % (quote(msg), pfpurl[pfpNum])
 
 class Misc(commands.Cog):
     @commands.command(name="qp", brief="Quick Poll designed for making decisions")
@@ -70,22 +76,32 @@ class Misc(commands.Cog):
     @commands.group()
     async def quote(self, ctx, *, msg):
         await ctx.message.delete()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(urlBuilder(msg)) as resp:
-                data = io.BytesIO(await resp.read())
-                await ctx.send(file=discord.File(data, 'underlexa_quote.png'))
-
-    # @quote.command()
-    # async def blush(self, ctx, *, msg):
-    #     async with aiohttp.ClientSession() as session:
-    #         async with session.get(urlBuilder(msg)) as resp:
-    #             data = io.BytesIO(await resp.read())
-    #             await ctx.send(file=discord.File(data, 'underlexa_quote.png'))
+        emote = 2
+        if msg.startswith("angry"):
+            msg = msg[6:]
+            emote = 0
+        elif msg.startswith("blush"):
+            msg = msg[6:]
+            emote = 1
+        elif msg.startswith("sad"):
+            msg = msg[4:]
+            emote = 3     
+        elif msg.startswith("suprised"):
+            msg = msg[9:]
+            emote = 4
+        if ctx.invoked_subcommand is None:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(urlBuilder(msg, emote)) as resp:
+                    data = io.BytesIO(await resp.read())
+                    await ctx.send(file=discord.File(data, 'underlexa_quote.png'))
 
     @commands.command()
     async def ship(self, ctx):
         await ctx.message.delete()
-        await ctx.send(file=discord.File("/home/jpw306/Pictures/loganboard.png"))
+        async with aiohttp.ClientSession() as session:
+                async with session.get("https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/loganboard.png") as resp:
+                    data = io.BytesIO(await resp.read())
+                    await ctx.send(file=discord.File(data, 'underlexa_quote.png'))
 
 def setup(bot):
     bot.add_cog(Misc(bot))
