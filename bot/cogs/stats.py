@@ -8,7 +8,7 @@ sql = sqlite3.connect("/home/jpw306/Desktop/Bot/data/Logan.db")
 db = sql.cursor()
 
 class Stats(commands.Cog):
-    @commands.command()
+    @commands.command(brief = "See how many messages you have sent")
     async def msg(self, ctx, user: discord.Member = None):
         if user:
             author = user
@@ -19,7 +19,7 @@ class Stats(commands.Cog):
         msg = rows[0]
         await ctx.send(f'{author.mention} has sent {msg} messages!')
     
-    @commands.command()
+    @commands.command(brief = "See how popular you are")
     async def uv(self, ctx, user: discord.Member = None):
         if user:
             author = user
@@ -30,7 +30,7 @@ class Stats(commands.Cog):
         uv = rows[0]
         await ctx.send(f'{author.mention} has {uv} upvotes!')
 
-    @commands.command()   
+    @commands.command(brief = "See what shame you have brought to your friends and family")   
     async def dv(self, ctx, user: discord.Member = None):
         if user:
             author = user
@@ -41,7 +41,7 @@ class Stats(commands.Cog):
         dv = rows[0]
         await ctx.send(f'{author.mention} has {dv} downvotes!')
 
-    @commands.command()    
+    @commands.command(brief = "See how average you are")    
     async def v(self, ctx, user: discord.Member = None):
         if user:
             author = user
@@ -62,6 +62,23 @@ class Stats(commands.Cog):
             await ctx.send(f'{author.mention} has {uv} upvotes and ~~{dv}~~ 0 downvotes for a total of ~~{pop}%~~ 100% popularity')   
         else:
             await ctx.send(f'{author.mention} has {uv} upvotes and {dv} downvotes for a total of {pop}% popularity')    
+
+    @commands.command()
+    async def setHOS(self, ctx):
+        channel = int(str(ctx.message.channel.id))
+        server = int(str(ctx.message.guild.id))
+        db.execute("SELECT HOS FROM server WHERE id=?", (server,))
+        rows = db.fetchone()
+        try:
+            id = rows[0]
+        except:
+            id = None
+        if id is not None:
+            db.execute("UPDATE server SET HOS=? WHERE id=?", (channel, server,))
+        else:
+            db.execute("INSERT INTO server (id, HOS) VALUES (?,?)", (server, channel,))
+        sql.commit()
+        await ctx.send("Setup complete! Welcome to the HOS")
 
 def setup(bot):
     bot.add_cog(Stats(bot))

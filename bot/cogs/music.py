@@ -114,7 +114,7 @@ class Queue:
     def set_repeat_mode(self, mode):
         if mode == "none":
             self.repeat_mode = RepeatMode.NONE
-        elif mode == "1":
+        elif mode == "1" or mode == "one":
             self.repeat_mode = RepeatMode.ONE
         elif mode == "all":
             self.repeat_mode = RepeatMode.ALL
@@ -269,7 +269,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         elif isinstance(obj, discord.Guild):
             return self.wavelink.get_player(obj.id, cls=Player)
 
-    @commands.command(name="connect", aliases = ['join'])
+    @commands.command(name="connect", aliases = ['join'], brief="Makes the bot join a voicechat you are currently in")
     async def connect_command(self, ctx, *, channel: t.Optional[discord.VoiceChannel]):
         player = self.get_player(ctx)
         channel = await player.connect(ctx, channel)
@@ -282,13 +282,13 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         elif isinstance(exc, NoVoiceChannel):
             await ctx.send("No suitable voice channel was provided.")
 
-    @commands.command(name="disconnect", aliases=['leave'])
+    @commands.command(name="disconnect", aliases=['leave'], brief="Force the bot to leave voice chat")
     async def disconnect_command(self, ctx):
         player = self.get_player(ctx)
         await player.teardown()
         await ctx.send("Disconnect.")
 
-    @commands.command(name="play")
+    @commands.command(name="play", brief="Play a song from either keywords or a YouTube link")
     async def play_command(self, ctx, *, query: t.Optional[str]):
         player = self.get_player(ctx)
         
@@ -317,7 +317,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             await ctx.send("No suitable voice channel was provided.")
 
 
-    @commands.command(name="pause")
+    @commands.command(name="pause", brief = "Pause the jams")
     async def pause_command(self, ctx):
         player = self.get_player(ctx)
 
@@ -332,14 +332,14 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         if isinstance(exc, PlayerIsAlreadyPaused):
             await ctx.send("Already paused.")
 
-    @commands.command(name="stop")
+    @commands.command(name="stop", brief="Stops all audio playback")
     async def stop_command(self, ctx):
         player = self.get_player(ctx)
         player.queue.empty()
         await player.stop()
         await ctx.send("Playback stopped.")
 
-    @commands.command(name="next", aliases=["skip"])
+    @commands.command(name="next", aliases=["skip"], brief="Skis to the next song")
     async def next_command(self, ctx):
         player = self.get_player(ctx)
 
@@ -356,7 +356,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         elif isinstance(exc, NoMoreTracks):
             await ctx.send("There are no more tracks in the queue.")
 
-    @commands.command(name="previous")
+    @commands.command(name="previous", brief="Replay the previous song")
     async def previous_command(self, ctx):
         player = self.get_player(ctx)
 
@@ -374,7 +374,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         elif isinstance(exc, NoPreviousTracks):
             await ctx.send("There are no previous tracks in the queue.")
 
-    @commands.command(name="shuffle")
+    @commands.command(name="shuffle", brief = "Shuffles the queue")
     async def shuffle_command(self, ctx):
         player = self.get_player(ctx)
         player.queue.shuffle()
@@ -385,16 +385,17 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         if isinstance(exc, QueueIsEmpty):
             await ctx.send("The queue could not be shuffled as it is empty.")
 
-    @commands.command(name="repeat")
+    @commands.command(name="repeat", brief = "Like an MP3 player but digital and sentient")
     async def repeat_command(self, ctx, mode: str):
-        if mode not in ("none", "1", "all"):
+        if mode not in ("none", "1", "one", "all"):
+            await ctx.send("Invalid repeat mode. Make sure you choose none, one, or all!")
             raise InvalidRepeatMode
 
         player = self.get_player(ctx)
         player.queue.set_repeat_mode(mode)
         await ctx.send(f"The repeat mode has been set to {mode}.")
 
-    @commands.command(name="queue")
+    @commands.command(name="queue", brief = "View the Queue")
     async def queue_command(self, ctx, show: t.Optional[int] = 10):
         player = self.get_player(ctx)
 

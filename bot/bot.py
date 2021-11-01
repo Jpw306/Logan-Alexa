@@ -23,7 +23,7 @@ async def update_data(user):
         if row[0] == user:
             found = True
     if found == False:
-        print("User not found")
+        print("User not found, adding New User to database")
         db.execute(f"INSERT INTO discord (id, msg) VALUES(?, ?)", (user, 0,))
         sql.commit()
     
@@ -97,53 +97,54 @@ class Bot(commands.Bot):
             print(f"{payload.user_id} has added {payload.emoji} to the message: {message.content}")
 
             #Hall of Shame
-            reaction = get(message.reactions, emoji=payload.emoji)
-            shame = reaction.count
-            reqShame = 6
+            server = int(str(message.guild.id))
+            HOSchannel = db.execute("SELECT HOS FROM server WHERE id=?", (server,))                       
+            rows = db.fetchone()
+            try:
+                id = rows[0]
+                HOS = self.get_channel(id)
+            except:
+                id = None
+            if HOS is not None:
+                reaction = get(message.reactions, emoji=payload.emoji)
+                shame = reaction.count
+                reqShame = 6
 
-            if shame >= reqShame:
-                db.execute("SELECT StarMessageID FROM starboard WHERE RootMessageID = ?", 
-                                    (str(message.id),)) or None
-                try:
-                    rows = db.fetchone()
-                    msg_id = rows[0]
-                except:
-                    pass
+                if shame >= reqShame:
+                    db.execute("SELECT StarMessageID FROM starboard WHERE RootMessageID = ?", 
+                                        (str(message.id),)) or None
+                    try:
+                        rows = db.fetchone()
+                        msg_id = rows[0]
+                    except:
+                        pass
 
-                embed = Embed(title="Hall Of Shame", 
-                            color=message.author.color,
-                            timestamp=datetime.utcnow())
+                    embed = Embed(title="Hall Of Shame", 
+                                color=message.author.color,
+                                timestamp=datetime.utcnow())
 
-                fields = [("Author", message.author.mention, False),
-                        ("Content", message.content or "See attachment", False),
-                        ("Downvotes", shame, False)]
+                    fields = [("Author", message.author.mention, False),
+                            ("Channel", message.channel.mention, True),
+                            ("Downvotes", shame, True),
+                            ("Content", message.content or "See attachment", False),
+                            ("Message", "[Click to jump to message](%s)" % message.jump_url, False)]
 
-                for name, value, inline in fields:
-                    embed.add_field(name = name, value=value, inline=inline)
+                    embed.set_thumbnail(url = message.author.avatar_url)
 
-                if len(message.attachments):
-                    embed.set_image(url=message.attachments[0].url)
+                    for name, value, inline in fields:
+                        embed.add_field(name = name, value=value, inline=inline)
 
-                try:
-                    star_message = await self.HOS.fetch_message(msg_id)
-                    await star_message.edit(embed=embed)
-                    db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", (shame, str(message.id),))
+                    if len(message.attachments):
+                        embed.set_image(url=message.attachments[0].url)
 
-                except:
-                    star_message = await self.HOS.send(embed=embed)
-                    db.execute("INSERT INTO starboard (RootMessageID, StarMessageID) VALUES (?, ?)", (str(message.id), str(star_message.id),))
+                    try:
+                        star_message = await HOS.fetch_message(msg_id)
+                        await star_message.edit(embed=embed)
+                        db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", (shame, str(message.id),))
 
-                # if shame == reqShame:
-                #     star_message = await self.HOS.send(embed=embed)
-                #     db.execute("INSERT INTO starboard (RootMessageID, StarMessageID) VALUES (?, ?)", (str(message.id),), str(star_message.id))
-
-                # else:
-                #     star_message = await self.HOS.fetch_message(msg_id)
-                #     await star_message.edit(embed=embed)
-                #     db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", shame, (str(message.id),))
-            
-        else:
-            pass
+                    except:
+                        star_message = await HOS.send(embed=embed)
+                        db.execute("INSERT INTO starboard (RootMessageID, StarMessageID) VALUES (?, ?)", (str(message.id), str(star_message.id),))
 
     async def on_raw_reaction_remove(self, payload):
         channel = self.get_channel(payload.channel_id)
@@ -168,37 +169,48 @@ class Bot(commands.Bot):
                 print(f"{payload.user_id} has removed {payload.emoji} from the message: {message.content}")
 
             #Hall of Shame
+            server = int(str(message.guild.id))
+            HOSchannel = db.execute("SELECT HOS FROM server WHERE id=?", (server,))           
+            rows = db.fetchone()
             try:
-                reaction = get(message.reactions, emoji=payload.emoji)
-                shame = reaction.count
-
-                db.execute("SELECT StarMessageID FROM starboard WHERE RootMessageID = ?", 
-                                    (str(message.id),)) or None
-                rows = db.fetchone()
-                msg_id = rows[0]
-
-                embed = Embed(title="Hall Of Shame", 
-                            color=message.author.color,
-                            timestamp=datetime.utcnow())
-
-                fields = [("Author", message.author.mention, False),
-                        ("Content", message.content or "See attachment", False),
-                        ("Downvotes", shame, False)]
-
-                for name, value, inline in fields:
-                    embed.add_field(name = name, value=value, inline=inline)
-
-                if len(message.attachments):
-                    embed.set_image(url=message.attachments[0].url)
-
-                
-                star_message = await self.HOS.fetch_message(msg_id)
-                await star_message.edit(embed=embed)
-                db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", (shame, str(message.id),))
+                id = rows[0]
+                HOS = self.get_channel(id)  
             except:
-                pass
-        else:
-            pass
+                id = None
+            if HOS is not None:
+                try:
+                    reaction = get(message.reactions, emoji=payload.emoji)
+                    shame = reaction.count
+
+                    db.execute("SELECT StarMessageID FROM starboard WHERE RootMessageID = ?", 
+                                        (str(message.id),)) or None
+                    rows = db.fetchone()
+                    msg_id = rows[0]
+
+                    embed = Embed(title="Hall Of Shame", 
+                                color=message.author.color,
+                                timestamp=datetime.utcnow())
+
+                    fields = [("Author", message.author.mention, False),
+                            ("Channel", message.channel.mention, True),
+                            ("Downvotes", shame, True),
+                            ("Content", message.content or "See attachment", False),
+                            ("Message", "[Click to jump to message](%s)" % message.jump_url, False)]
+
+                    embed.set_thumbnail(url = message.author.avatar_url)
+
+                    for name, value, inline in fields:
+                        embed.add_field(name = name, value=value, inline=inline)
+
+                    if len(message.attachments):
+                        embed.set_image(url=message.attachments[0].url)
+
+                    
+                    star_message = await HOS.fetch_message(msg_id)
+                    await star_message.edit(embed=embed)
+                    db.execute("UPDATE starboard SET Stars = ? WHERE RootMessageID = ?", (shame, str(message.id),))
+                except:
+                    pass
 
     async def on_error(self, err, *args, **kwargs):
         raise
@@ -208,7 +220,7 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         self.client_id = (await self.application_info()).id
-        self.HOS = self.get_channel(883807348701925416)
+        #self.HOS = self.get_channel(883807348701925416)
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name='Field of Hopes and Dreams'))
         print('Logged in as {0} ({0.id})'.format(self.user))
         print('------')
@@ -219,26 +231,31 @@ class Bot(commands.Bot):
     async def process_commands(self, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
 
-        keyword1 = r"\bforgot\b"
-        keyword2 = r"\bforgor\b"
-        keyword3 = r"\bone\b"
-        keyword4 = r"\b1\b"
+        if str(ctx.channel) != "therapy-channel-uwu":
+            if not msg.author.bot and msg.guild.id == 852032855890722847:
+                keyword1 = r"\bforgot\b"
+                keyword2 = r"\bforgor\b"
+                keyword3 = r"\bone\b"
+                keyword4 = r"\b1\b"
 
-        if len(re.findall(keyword1, msg.content, re.I)) > 0:
-            await ctx.send("forgor 💀")
-        
-        if len(re.findall(keyword2, msg.content, re.I)) > 0:
-            await ctx.send("forgot ❤️")
+                if len(re.findall(keyword1, msg.content, re.I)) > 0:
+                    await ctx.send("forgor 💀")
+                
+                if len(re.findall(keyword2, msg.content, re.I)) > 0:
+                    await ctx.send("forgot ❤️")
 
-        if len(re.findall(keyword3, msg.content, re.I)) > 0 or len(re.findall(keyword4, msg.content, re.I)) > 0:
-            await ctx.send("Uno!")
+                if len(re.findall(keyword3, msg.content, re.I)) > 0 or len(re.findall(keyword4, msg.content, re.I)) > 0:
+                    await ctx.send("Uno!")
 
-        if ctx.command is not None:
-            await self.invoke(ctx)
+            if ctx.command is not None:
+                await self.invoke(ctx)
 
     async def on_message(self, msg):
-        if not msg.author.bot:
-            await update_data(str(msg.author))
-            await add_messages(str(msg.author))
-            await self.process_commands(msg)
+        await update_data(str(msg.author))
+        await add_messages(str(msg.author))
+        await self.process_commands(msg)
      
+    # @commands.command()
+    # async def announcement(self, ctx, msg):
+    #     announcement = msg 
+    #     await ctx.send("Announcement set to: " + announcement)    
