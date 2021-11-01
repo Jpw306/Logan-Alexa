@@ -86,7 +86,7 @@ class Misc(commands.Cog):
         elif msg.startswith("sad"):
             msg = msg[4:]
             emote = 3     
-        elif msg.startswith("suprised"):
+        elif msg.startswith("surprise"):
             msg = msg[9:]
             emote = 4
         if ctx.invoked_subcommand is None:
