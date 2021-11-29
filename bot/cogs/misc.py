@@ -5,6 +5,8 @@ from urllib.parse import quote
 
 from discord.ext import commands
 from discord.utils import get
+from discord_slash import SlashCommand, SlashContext, cog_ext
+from discord_slash.utils.manage_commands import create_choice, create_option
 
 import io
 import aiohttp
@@ -74,7 +76,7 @@ class Misc(commands.Cog):
         await ctx.send("https://github.com/Jpw306/Logan-Alexa")
 
     @commands.group()
-    async def quote(self, ctx, *, msg):
+    async def quote(self, ctx:SlashContext, *, msg):
         await ctx.message.delete()
         emote = 2
         if msg.startswith("angry"):
@@ -102,6 +104,89 @@ class Misc(commands.Cog):
                 async with session.get("https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/loganboard.png") as resp:
                     data = io.BytesIO(await resp.read())
                     await ctx.send(file=discord.File(data, 'underlexa_quote.png'))
+
+    @commands.command()
+    async def RPS(self, ctx, symbol):
+        RPSchoices = ["Rock", "Paper", "Scissors"]
+
+        embed = discord.Embed(
+            title="Rock Paper Scissors Game",
+            color=ctx.author.color,
+        )
+
+        symbol = symbol.lower()
+        symbol = symbol.capitalize()
+
+        if symbol in RPSchoices:
+            result = "None"
+            com = RPSchoices[random.randrange(0,3)]
+
+            if com == symbol:
+                result = "Tied"
+            else:
+                if com == "Rock":
+                    if symbol == "Paper":
+                        result = "Win"
+                    else:
+                        result = "Lose"
+                elif com == "Paper":
+                    if symbol == "Rock":
+                        result = "Lose"
+                    else:
+                        result = "Win"
+                else:
+                    if symbol == "Rock":
+                        result = "Win"
+                    else:
+                        result = "Lose"
+
+            fields = [("Player Choice:", symbol, False),
+                        ("Logan's Alexa's Choice:", com, False),
+                        ("Outcome:", "You " + result + "!", False)]
+
+            for name, value, inline in fields:
+                embed.add_field(name = name, value=value, inline=inline)
+            embed.set_footer(text=f"RPS Game invoked by {ctx.author.display_name}", icon_url=ctx.author.avatar_url)
+            await ctx.message.delete()
+
+            msg = await ctx.send(embed=embed)
+
+        else:
+            await ctx.send("Invalid choice")
+
+    @commands.command()
+    async def define(self, ctx, *, word):
+        url = "https://mashape-community-urban-dictionary.p.rapidapi.com/define"
+        querystring = {"term": word}
+
+        with open("data/api.0", "r", encoding="utf-8") as f:
+            KEY = f.read()
+
+        headers = {
+            'x-rapidapi-host': "mashape-community-urban-dictionary.p.rapidapi.com",
+            'x-rapidapi-key': KEY
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                    async with session.get(url, headers=headers, params=querystring) as resp:
+                        r = await resp.json()
+                        embed = discord.Embed(title=f"First result for '{word}':")
+
+                        definition = r["list"][0]["definition"]
+                        example = r["list"][0]["example"]
+
+                        fields = [("Definition", definition, False),
+                                ("Example", example, False)]
+
+                        embed.set_thumbnail(url="https://images.newrepublic.com/a0a10f8123e4aeb5617a37ffd2f7f1449d1b69e1.jpeg")
+
+                        for name, value, inline in fields:
+                            embed.add_field(name = name, value=value, inline=inline)
+                        
+                        await ctx.send(embed=embed)
+        except:
+            await ctx.send(f"Could not find definition for '{word}'")
 
 def setup(bot):
     bot.add_cog(Misc(bot))

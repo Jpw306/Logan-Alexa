@@ -5,11 +5,13 @@ import re
 import typing as t
 from enum import Enum
 
+import aiohttp
 import discord
 import wavelink
 from discord.ext import commands
 
 URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+LYRICS_URL = "https://some-random-api.ml/lyrics?title="
 OPTIONS = {
     "1️⃣": 0,
     "2⃣": 1,
@@ -40,6 +42,9 @@ class NoPreviousTracks(commands.CommandError):
     pass
 
 class InvalidRepeatMode(commands.CommandError):
+    pass
+
+class NoLyricsFound(commands.CommandError):
     pass
 
 class RepeatMode(Enum):
@@ -269,7 +274,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         elif isinstance(obj, discord.Guild):
             return self.wavelink.get_player(obj.id, cls=Player)
 
-    @commands.command(name="connect", aliases = ['join'], brief="Makes the bot join a voicechat you are currently in")
+    @commands.command(name="connect", aliases = ['join', 'dropin'], brief="Makes the bot join a voicechat you are currently in")
     async def connect_command(self, ctx, *, channel: t.Optional[discord.VoiceChannel]):
         player = self.get_player(ctx)
         channel = await player.connect(ctx, channel)
@@ -282,7 +287,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         elif isinstance(exc, NoVoiceChannel):
             await ctx.send("No suitable voice channel was provided.")
 
-    @commands.command(name="disconnect", aliases=['leave'], brief="Force the bot to leave voice chat")
+    @commands.command(name="disconnect", aliases=['leave', 'dropout'], brief="Force the bot to leave voice chat")
     async def disconnect_command(self, ctx):
         player = self.get_player(ctx)
         await player.teardown()
@@ -423,6 +428,36 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     async def queue_command_error(self, ctx, exc):
         if isinstance(exc, QueueIsEmpty):
             await ctx.send("The queue is currently empty.")
+            
+    @commands.command(name='lyrics')
+    async def lyrics(self, ctx, *, name: t.Optional[str]):
+        player = self.get_player(ctx)
+        name = name or player.queue.current_track.title
+
+        async with ctx.typing():
+            async with aiohttp.request("GET", LYRICS_URL + name, headers = {}) as r:
+                if not 200 <= r.status <= 299:
+                    raise NoLyricsFound
+
+                data = await r.json()
+
+                if len(data["lyrics"]) > 2000:
+                    return await ctx.send(f"<{data['links']['genius']}>") 
+                
+                embed = discord.Embed(
+                    title = data["title"],
+                    description = data["lyrics"],
+                    color = ctx.author.color,
+                    timestamp = dt.datetime.utcnow()
+                )
+                embed.set_thumbnail(url=data["thumbnail"]["genius"])
+                embed.set_author(name=data["author"])
+                await ctx.send(embed=embed)
+
+    @lyrics.error
+    async def lyrics_error(self, ctx, exc):
+        if isinstance(exc, NoLyricsFound):
+            await ctx.send("No lyrics could be found.")
 
 def setup(bot):
     bot.add_cog(Music(bot))

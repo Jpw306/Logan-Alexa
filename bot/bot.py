@@ -3,7 +3,6 @@ from datetime import datetime
 
 import discord
 import sqlite3
-import re
 
 from discord.ext import commands
 from discord import Embed
@@ -226,29 +225,38 @@ class Bot(commands.Bot):
         print('------')
 
     async def prefix(self, bot, msg):
-        return commands.when_mentioned_or("$")(bot, msg)
+        prefixes = ["$", "Alexa ", "alexa "]
+        return commands.when_mentioned_or(*prefixes)(bot, msg)
 
     async def process_commands(self, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
 
-        if str(ctx.channel) != "therapy-channel-uwu":
-            if not msg.author.bot and msg.guild.id == 852032855890722847:
-                keyword1 = r"\bforgot\b"
-                keyword2 = r"\bforgor\b"
-                keyword3 = r"\bone\b"
-                keyword4 = r"\b1\b"
+        # if str(ctx.channel) != "therapy-channel-uwu":
+        #     if not msg.author.bot and msg.guild.id == 852032855890722847:
+        #         keywords = [r"\bforgot\b",
+        #                     r"\bforgor\b",
+        #                     r"\bone\b",
+        #                     r"\b1\b",
+        #                     r"\blmao\b",
+        #                     r"\blol\b"]
 
-                if len(re.findall(keyword1, msg.content, re.I)) > 0:
-                    await ctx.send("forgor 💀")
+        #         if len(re.findall(keywords[0], msg.content, re.I)) > 0:
+        #             await ctx.send("forgor 💀")
                 
-                if len(re.findall(keyword2, msg.content, re.I)) > 0:
-                    await ctx.send("forgot ❤️")
+        #         if len(re.findall(keywords[1], msg.content, re.I)) > 0:
+        #             await ctx.send("forgot ❤️")
 
-                if len(re.findall(keyword3, msg.content, re.I)) > 0 or len(re.findall(keyword4, msg.content, re.I)) > 0:
-                    await ctx.send("Uno!")
+        #         if len(re.findall(keywords[2], msg.content, re.I)) > 0 or len(re.findall(keywords[3], msg.content, re.I)) > 0:
+        #             await ctx.send("Uno!")
 
-            if ctx.command is not None:
-                await self.invoke(ctx)
+        #         if len(re.findall(keywords[4], msg.content, re.I)) > 0 or len(re.findall(keywords[5], msg.content, re.I)) > 0:
+        #             async with aiohttp.ClientSession() as session:
+        #                 async with session.get("https://www.demirramon.com/gen/undertale_text_box.png?text=LMAO.&box=deltarune&boxcolor=ffffff&character=deltarune-queen&expression=lmao&charcolor=colored&font=determination&asterisk=ffffff&mode=darkworld") as resp:
+        #                     data = io.BytesIO(await resp.read())
+        #                     await ctx.send(file=discord.File(data, 'lmao.png'))
+
+        if ctx.command is not None:
+            await self.invoke(ctx)
 
     async def on_message(self, msg):
         await update_data(str(msg.author))
