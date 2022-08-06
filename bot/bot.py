@@ -3,6 +3,7 @@ from datetime import datetime
 
 import discord
 import sqlite3
+import re
 
 from discord.ext import commands
 from discord import Embed
@@ -11,27 +12,29 @@ from discord.utils import get
 intents = discord.Intents.default()
 intents.members = True
 
-sql = sqlite3.connect("/home/jpw306/Desktop/Bot/data/Logan.db")
+sql = sqlite3.connect("/home/pi/Desktop/Bot/data/Logan.db")
 db = sql.cursor()
 
-async def update_data(user):        
-    db.execute("SELECT id FROM discord")
+async def update_data(user, display):
+    db.execute("SELECT id FROM member")
     rows = db.fetchall()
     found = False
     for row in rows:
         if row[0] == user:
             found = True
+            db.execute(f"UPDATE member SET display=? WHERE id= ?", (display, user,))
+            sql.commit() 
     if found == False:
         print("User not found, adding New User to database")
-        db.execute(f"INSERT INTO discord (id, msg) VALUES(?, ?)", (user, 0,))
+        db.execute(f"INSERT INTO member (id, display,  msg) VALUES(?, ?, ?)", (user, display, 0,))
         sql.commit()
     
 async def add_messages(user):
-    db.execute(f"SELECT msg FROM discord WHERE id = ?", (user,))
+    db.execute(f"SELECT msg FROM member WHERE id = ?", (user,))
     rows = db.fetchone()
     msg = rows[0]
     msg += 1
-    db.execute(f"UPDATE discord SET msg=? WHERE id= ?", (msg, user,))
+    db.execute(f"UPDATE member SET msg=? WHERE id= ?", (msg, user,))
     sql.commit() 
 
 class Bot(commands.Bot):
@@ -79,25 +82,25 @@ class Bot(commands.Bot):
         channel = self.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         if payload.emoji.name == "upvote":
-            db.execute("SELECT uv FROM discord WHERE id = ?", (str(message.author),))
+            db.execute("SELECT uv FROM member WHERE id = ?", (str(payload.user_id),))
             rows = db.fetchone()
             uv = rows[0]
             uv += 1
-            db.execute("UPDATE discord SET uv=? WHERE id= ?", (uv, str(message.author),))
+            db.execute("UPDATE member SET uv=? WHERE id= ?", (uv, str(payload.user_id),))
             sql.commit()
             print(f"{payload.user_id} has added {payload.emoji} to the message: {message.content}")
         elif payload.emoji.name == "downvote":
-            db.execute("SELECT dv FROM discord WHERE id = ?", (str(message.author),))
+            db.execute("SELECT dv FROM member WHERE id = ?", (str(payload.user_id),))
             rows = db.fetchone()
             dv = rows[0]
             dv += 1
-            db.execute("UPDATE discord SET dv=? WHERE id= ?", (dv, str(message.author),))
+            db.execute("UPDATE member SET dv=? WHERE id= ?", (dv, str(payload.user_id),))
             sql.commit()
             print(f"{payload.user_id} has added {payload.emoji} to the message: {message.content}")
 
             #Hall of Shame
             server = int(str(message.guild.id))
-            HOSchannel = db.execute("SELECT HOS FROM server WHERE id=?", (server,))                       
+            HOSchannel = db.execute("SELECT HOS FROM member WHERE id=?", (server,))                       
             rows = db.fetchone()
             try:
                 id = rows[0]
@@ -149,21 +152,21 @@ class Bot(commands.Bot):
         channel = self.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         if payload.emoji.name == "upvote":
-            db.execute("SELECT uv FROM discord WHERE id = ?", (str(message.author),))
+            db.execute("SELECT uv FROM member WHERE id = ?", (str(payload.user_id),))
             rows = db.fetchone()
             uv = rows[0]
             if uv != 0: 
                 uv -= 1
-                db.execute("UPDATE discord SET uv=? WHERE id= ?", (uv, str(message.author),))
+                db.execute("UPDATE member SET uv=? WHERE id= ?", (uv, str(payload.user_id),))
                 sql.commit()
                 print(f"{payload.user_id} has removed {payload.emoji} from the message: {message.content}")
         elif payload.emoji.name == "downvote":
-            db.execute("SELECT dv FROM discord WHERE id = ?", (str(message.author),))
+            db.execute("SELECT dv FROM member WHERE id = ?", (str(payload.user_id),))
             rows = db.fetchone()
             dv = rows[0]
             if dv != 0:
                 dv -= 1
-                db.execute("UPDATE discord SET dv=? WHERE id= ?", (dv, str(message.author),))
+                db.execute("UPDATE member SET dv=? WHERE id= ?", (dv, str(payload.user_id),))
                 sql.commit()
                 print(f"{payload.user_id} has removed {payload.emoji} from the message: {message.content}")
 
@@ -231,39 +234,16 @@ class Bot(commands.Bot):
     async def process_commands(self, msg):
         ctx = await self.get_context(msg, cls=commands.Context)
 
-        # if str(ctx.channel) != "therapy-channel-uwu":
-        #     if not msg.author.bot and msg.guild.id == 852032855890722847:
-        #         keywords = [r"\bforgot\b",
-        #                     r"\bforgor\b",
-        #                     r"\bone\b",
-        #                     r"\b1\b",
-        #                     r"\blmao\b",
-        #                     r"\blol\b"]
+        keywords = [r"\byippee\b"]
 
-        #         if len(re.findall(keywords[0], msg.content, re.I)) > 0:
-        #             await ctx.send("forgor 💀")
-                
-        #         if len(re.findall(keywords[1], msg.content, re.I)) > 0:
-        #             await ctx.send("forgot ❤️")
-
-        #         if len(re.findall(keywords[2], msg.content, re.I)) > 0 or len(re.findall(keywords[3], msg.content, re.I)) > 0:
-        #             await ctx.send("Uno!")
-
-        #         if len(re.findall(keywords[4], msg.content, re.I)) > 0 or len(re.findall(keywords[5], msg.content, re.I)) > 0:
-        #             async with aiohttp.ClientSession() as session:
-        #                 async with session.get("https://www.demirramon.com/gen/undertale_text_box.png?text=LMAO.&box=deltarune&boxcolor=ffffff&character=deltarune-queen&expression=lmao&charcolor=colored&font=determination&asterisk=ffffff&mode=darkworld") as resp:
-        #                     data = io.BytesIO(await resp.read())
-        #                     await ctx.send(file=discord.File(data, 'lmao.png'))
+        if not msg.author.bot:
+            if len(re.findall(keywords[0], msg.content, re.I)) > 0:
+                await ctx.send("https://c.tenor.com/g16jQZqbvWoAAAAC/yippee-happy.gif")
 
         if ctx.command is not None:
             await self.invoke(ctx)
 
     async def on_message(self, msg):
-        await update_data(str(msg.author))
-        await add_messages(str(msg.author))
+        await update_data(int(msg.author.id), str(msg.author))
+        await add_messages(int(msg.author.id))
         await self.process_commands(msg)
-     
-    # @commands.command()
-    # async def announcement(self, ctx, msg):
-    #     announcement = msg 
-    #     await ctx.send("Announcement set to: " + announcement)    

@@ -5,8 +5,6 @@ from urllib.parse import quote
 
 from discord.ext import commands
 from discord.utils import get
-from discord_slash import SlashCommand, SlashContext, cog_ext
-from discord_slash.utils.manage_commands import create_choice, create_option
 
 import io
 import aiohttp
@@ -16,8 +14,6 @@ pfpurl = ["https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/a
         "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/happy.png",
         "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/sad.png",
         "https://raw.githubusercontent.com/Jpw306/Logan-Alexa/master/sprites/suprise.png"]
-
-
 
 def urlBuilder(msg, pfpNum):
     return "https://www.demirramon.com/gen/undertale_text_box.png?text=%s&box=undertale&boxcolor=ffffff&character=custom&url=%s" % (quote(msg), pfpurl[pfpNum])
@@ -51,20 +47,10 @@ class Misc(commands.Cog):
             for i in range(options):
                 await msg.add_reaction(emojiList[i])
                 
-
     @commands.command(name="8ball", brief = "Test your fate with the power of a random function")
     async def eight_Ball(self, ctx, *, question):
         responses = ['Yes', 'No', 'Definitely Yes', 'Definitely No', 'Most of the time', 'It is certain', 'It is decidedly so', 'Without a doubt', 'As I see, yes', 'Most likely', 'Outlook good', 'Signs point to yes', 'Do not count on it', 'My reply is no', 'My sources say no', 'Outlook not so good', 'Very doubtful', 'When pigs fly']
         await ctx.send(f'Question: {question}\nAnswer: {random.choice(responses)}')
-
-    # @commands.command(name="Clear", brief="Clears up to 5 messages. Clearly eligible for abuse")
-    # async def clear(self, ctx, amount: t.Optional[int]):
-    #     if amount is None:
-    #         await ctx.channel.purge(limit = 6)        
-    #     elif amount >= 11:
-    #         await ctx.send("That is too powerful. Tone it down a bit")
-    #     else:
-    #         await ctx.channel.purge(limit = amount + 1)
 
     @commands.command(name="Jallah", brief="Want a clear yes or no answer? Ask the Quieréslam Queen") 
     async def jallah(self, ctx, *, question):
@@ -76,7 +62,7 @@ class Misc(commands.Cog):
         await ctx.send("https://github.com/Jpw306/Logan-Alexa")
 
     @commands.group()
-    async def quote(self, ctx:SlashContext, *, msg):
+    async def quote(self, ctx, *, msg):
         await ctx.message.delete()
         emote = 2
         if msg.startswith("angry"):
@@ -179,7 +165,7 @@ class Misc(commands.Cog):
                         fields = [("Definition", definition, False),
                                 ("Example", example, False)]
 
-                        embed.set_thumbnail(url="https://images.newrepublic.com/a0a10f8123e4aeb5617a37ffd2f7f1449d1b69e1.jpeg")
+                        embed.set_thumbnail(url="https://static.wikia.nocookie.net/villains/images/d/d9/Spamton_battle_static.png/revision/latest?cb=20211029231523")
 
                         for name, value, inline in fields:
                             embed.add_field(name = name, value=value, inline=inline)
